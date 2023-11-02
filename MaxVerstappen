@@ -1,0 +1,172 @@
+package RBR;
+
+import robocode.*;
+import robocode.util.Utils;
+import java.awt.Color;
+import java.util.Hashtable;
+import java.util.Enumeration;
+import java.awt.geom.Rectangle2D;
+import java.awt.geom.Point2D;
+
+//  MaxVerstappen - a robot by Paulo Ricardo de Oliveira & Iasmin Boaventura de Oliveira
+
+public class MaxVerstappen extends AdvancedRobot
+{
+	static Hashtable enemies = new Hashtable();
+	static microEnemy target;
+	static Point2D.Double nextDestination;
+	static Point2D.Double lastPosition;
+	static Point2D.Double myPos;
+	static double myEnergy;
+	
+//- run -------------------------------------------------------------------------------------------------------------------------------------
+	public void run()
+	{
+		setColors(Color.black,Color.red,Color.orange);
+		setAdjustGunForRobotTurn(true);
+		setAdjustRadarForGunTurn(true);
+		
+		setTurnRadarRightRadians(Double.POSITIVE_INFINITY);
+		
+		nextDestination = lastPosition = myPos = new Point2D.Double(getX(), getY());
+		target = new microEnemy();
+		
+		do {
+			
+			myPos = new Point2D.Double(getX(),getY());
+			myEnergy = getEnergy();
+			
+			// Espere até escanear todos os outros robôs. Isso deve levar cerca de 7 a 9 ticks.
+			if(target.live && getTime()>9) {
+				doMovementAndGun();
+			}
+			
+			execute();
+			
+		} while(true);
+	}
+	
+//- stuff -----------------------------------------------------------------------------------------------------------------------------------
+	public void doMovementAndGun() {
+		
+		double distanceToTarget = myPos.distance(target.pos);
+		
+	//**** Arma ******************//
+		// Não tenho nada pra falar sobre ela kkkkkk, divirta-se
+		if(getGunTurnRemaining() == 0 && myEnergy > 1) {
+			setFire( Math.min(Math.min(myEnergy/6d, 1300d/distanceToTarget), target.energy/3d) );
+		}
+		
+		setTurnGunRightRadians(Utils.normalRelativeAngle(calcAngle(target.pos, myPos) - getGunHeadingRadians()));
+		
+	//**** Movimento de Surf *****************//
+		double distanceToNextDestination = myPos.distance(nextDestination);
+		
+		// Procure um novo destino se eu alcançar este
+		if(distanceToNextDestination < 15) {
+			
+			// deve haver fórmulas melhores do que esta, mas basicamente está aqui para melhorar o desempenho 1x1. com mais robôs
+			// addLast será na maioria das vezes 1
+			double addLast = 1 - Math.rint(Math.pow(Math.random(), getOthers()));
+			
+			Rectangle2D.Double battleField = new Rectangle2D.Double(30, 30, getBattleFieldWidth() - 60, getBattleFieldHeight() - 60);
+			Point2D.Double testPoint;
+			int i=0;
+			
+			do {
+				// calcula o ponto de teste em algum lugar perto da posição atual. 100 + 200*Math.random() é bom se houver
+				// cerca de 10 robôs em um campo de 1000x1000. mas isso precisa ser limitado a distanciaParaAlvo*0.8. assim o robô não
+				// irá se chocar com o alvo (deve ser principalmente o robô mais próximo)
+				testPoint = calcPoint(myPos, Math.min(distanceToTarget*0.8, 100 + 200*Math.random()), 2*Math.PI*Math.random());
+				if(battleField.contains(testPoint) && evaluate(testPoint, addLast) < evaluate(nextDestination, addLast)) {
+					nextDestination = testPoint;
+				}
+			} while(i++ < 200);
+			
+			lastPosition = myPos;
+			
+		} else {
+			
+		// Apenas um movimento normal para o destino
+			double angle = calcAngle(nextDestination, myPos) - getHeadingRadians();
+			double direction = 1;
+			
+			if(Math.cos(angle) < 0) {
+				angle += Math.PI;
+				direction = -1;
+			}
+			
+			setAhead(distanceToNextDestination * direction);
+			setTurnRightRadians(angle = Utils.normalRelativeAngle(angle));
+			// bater nas paredes não é uma boa ideia, mas o Max ainda faz isso com bastante frequência
+			setMaxVelocity(Math.abs(angle) > 1 ? 0 : 8d);
+			
+		}
+	}
+	
+//- eval position ---------------------------------------------------------------------------------------------------------------------------
+	public static double evaluate(Point2D.Double p, double addLast) {
+		// basicamente aqui que o robô usa mais espaço no campo de batalha. Em combates em equipe, é perigoso ficar parado em um lugar por muito tempo.
+		double eval = addLast*0.08/p.distanceSq(lastPosition);
+		
+		Enumeration _enum = enemies.elements();
+		while (_enum.hasMoreElements()) {
+			microEnemy en = (microEnemy)_enum.nextElement();
+			//  este é o coração do Max. Vou tentar explicar o que eu queria fazer:
+			// - Math.min(en.energy/myEnergy,2) é multiplicado porque en.energy/myEnergy é um indicador de quão perigoso um inimigo é
+			// - Math.abs(Math.cos(calcAngle(myPos, p) - calcularAngulo(en.pos, p))) é maior se a direção de movimento não for boa em relação
+			//   a um determinado robô. seria mais natural usar Math.abs(Math.cos(calcAngle(p, myPos) - calcAngle(en.pos, myPos)))
+			//   mas isso não estava me dando bons resultados
+			// - 1 / p.distanceSq(en.pos) anti gravidade kkk
+			if(en.live) {
+				eval += Math.min(en.energy/myEnergy,2) * 
+						(1 + Math.abs(Math.cos(calcAngle(myPos, p) - calcAngle(en.pos, p)))) / p.distanceSq(en.pos);
+			}
+		}
+		return eval;
+	}
+	
+//- Scanner ------------------------------------------------------------------------------------------------------------------------------
+	public void onScannedRobot(ScannedRobotEvent e)
+	{
+		microEnemy en = (microEnemy)enemies.get(e.getName());
+		
+		if(en == null){
+			en = new microEnemy();
+			enemies.put(e.getName(), en);
+		}
+		
+		en.energy = e.getEnergy();
+		en.live = true;
+		en.pos = calcPoint(myPos, e.getDistance(), getHeadingRadians() + e.getBearingRadians());
+		
+		// Verifica qual o robo mais próximo, se ele está próximo é perigoso então, ataca.
+		if(!target.live || e.getDistance() < myPos.distance(target.pos)) {
+			target = en;
+		}
+		
+		// trava o scanner se houver apenas um oponente restante
+		if(getOthers()==1)	setTurnRadarLeftRadians(getRadarTurnRemainingRadians());
+	}
+	
+//- minor events ----------------------------------------------------------------------------------------------------------------------------
+	public void onRobotDeath(RobotDeathEvent e) {
+		((microEnemy)enemies.get(e.getName())).live = false;
+	}
+	
+//- math ------------------------------------------------------------------------------------------------------------------------------------
+	private static Point2D.Double calcPoint(Point2D.Double p, double dist, double ang) {
+		return new Point2D.Double(p.x + dist*Math.sin(ang), p.y + dist*Math.cos(ang));
+	}
+	
+	private static double calcAngle(Point2D.Double p2,Point2D.Double p1){
+		return Math.atan2(p2.x - p1.x, p2.y - p1.y);
+	}
+	
+//- microEnemy ------------------------------------------------------------------------------------------------------------------------------
+	public class microEnemy {
+		public Point2D.Double pos;
+		public double energy;
+		public boolean live;
+	}
+}
