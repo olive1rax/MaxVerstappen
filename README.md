@@ -1,4 +1,4 @@
-# Max Verstappen - 🏆 O Campeão da 3ª Competição de Robocode da UNIP 🤖🏎️
+# Max Verstappen 🤖🏎️
 
 Bem-vindo ao repositório do nosso herói robótico, Max Verstappen! Ele é o grande vencedor da 3ª Competição de Robocode da Universidade Paulista (UNIP), e este repositório é o lugar onde todos os seus segredos estão guardados, cortesia de Paulo Ricardo de Oliveira e [Iasmin Boaventura](https://github.com/iasmin-boaventura).
 
