@@ -1,6 +1,6 @@
 # Max Verstappen 🤖🏎️
 
-Bem-vindo ao repositório do nosso herói robótico, Max Verstappen! Ele é o grande vencedor da 3ª Competição de Robocode da Universidade Paulista (UNIP), e este repositório é o lugar onde todos os seus segredos estão guardados, cortesia de Paulo Ricardo de Oliveira e [Iasmin Boaventura](https://github.com/iasmin-boaventura).
+Bem-vindo ao repositório do nosso herói robótico, Max Verstappen! Ele já venceu algumas batalhas e também foi campeão da 3ª Competição de Robocode da Universidade Paulista (UNIP), este repositório é o lugar onde todos os seus segredos estão guardados, cortesia de [Paulo Ricardo](https://github.com/olive1rax) e [Iasmin Boaventura](https://github.com/iasmin-boaventura).
 
 **Sobre Max Verstappen:**
 Max Verstappen, nosso intrépido robô, conquistou o primeiro lugar na espetacular competição de Robocode da UNIP, deixando todos os concorrentes para trás. 🚀 Neste repositório, você encontrará o código-fonte que levou Max à vitória merecida.
